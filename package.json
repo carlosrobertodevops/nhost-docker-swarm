@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "nhost": "NHOST_PROJECT_NAME=self-host-test nhost"
+  },
+  "dependencies": {
+    "@nhost/nhost-js": "^3.1.8"
+  }
+}
