@@ -69,6 +69,91 @@ Portainer is a dashboard for your Docker Swarm. It allows you to see containers,
 Kuma is an uptime monitor. It's completely optional to use it, but it's good to be notified if anything goes wrong, even though you're maybe not supposed to run the uptime monitor on the same server as what you're monitoring.
 
 
+## Server
+
+You obviously need a server to deploy to. It needs to have docker installed and the public ssh key of a ssh you have on your computer.
+
+After you start the server, ssh into it and enable docker swarm with `docker swarm init`, create the network `docker network create traefik-public` and volume `docker volume create postgres_data`.
+
+
+You can use this cloud-init on Hetzner, Vultr and other server providers that supports cloud-init:
+
+```yaml
+#cloud-config
+package_update: true
+package_upgrade: true
+
+runcmd:
+  # 1. Install necessary packages and Docker dependencies
+  - apt-get update && apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    software-properties-common \
+    gnupg-agent \
+    lsb-release
+
+  # 2. Add Docker's official GPG key and repository
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+  - add-apt-repository \
+    "deb [arch=amd64] https://download.docker.com/linux/$(lsb_release -cs) stable"
+
+  # 3. Install Docker CE, Docker CLI, and containerd
+  - apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io
+
+  # 4. Add the 'docker' group and current user to the group (if using non-root user)
+  - usermod -aG docker $USER
+
+  # 5. Enable and start Docker service
+  - systemctl enable docker
+  - systemctl start docker
+
+  # 6. Set up Docker Swarm (initiate manager node)
+  - docker swarm init --advertise-addr $(hostname -I | awk '{print $1}')
+
+  # 7. Configure UFW firewall to allow necessary ports for Docker Swarm
+  - ufw allow OpenSSH
+  - ufw allow 2376/tcp  # Docker daemon
+  - ufw allow 2377/tcp  # Docker Swarm cluster management
+  - ufw allow 7946/tcp  # Docker Swarm node communication
+  - ufw allow 7946/udp  # Docker Swarm node communication
+  - ufw allow 4789/udp  # Docker Swarm overlay network
+  - ufw allow 443/tcp   # HTTPS traffic (optional, if using Traefik or another proxy)
+  - ufw allow 80/tcp    # HTTP traffic (optional, if using Traefik or another proxy)
+  - ufw allow 6432/tcp    # If you want to connect to pgbouncer from the internet
+  - ufw --force enable
+
+  # 8. Enable Docker Swarm configuration and logging (create default directory for persistent logs)
+  - mkdir -p /var/log/docker
+  - touch /var/log/docker/docker.log
+  - echo '{"log-driver": "json-file", "log-opts": {"max-size": "10m", "max-file": "3"}}' > /etc/docker/daemon.json
+
+  # 9. Restart Docker to apply logging configuration
+  - systemctl restart docker
+
+  # 10. Install and configure fail2ban for SSH security
+  - apt-get install -y fail2ban
+  - systemctl enable fail2ban
+  - systemctl start fail2ban
+
+# 11. Add a MOTD for Docker Swarm
+write_files:
+  - path: /etc/motd
+    content: |
+      Welcome to your Docker Swarm manager node!
+      - Docker version: $(docker --version)
+      - Swarm initialized: Yes
+
+# 12. (Optional) Automatically clean up unused Docker resources weekly
+  - path: /etc/cron.weekly/docker-cleanup
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      docker system prune -af
+
+```
+
+
 ## Add more Nhost apps
 
 If you set up Traefik, the Postgres and optionally portainer, you can use these for many Nhost apps. Just set up what's inside the nhost folder with the correct env variables and deploy labels.
