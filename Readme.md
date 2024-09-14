@@ -4,7 +4,7 @@ Run Nhost on your own server. Useful if you have data-intensive apps that quickl
 
 Self-hosting is not impossible, but it is harder and you will have more problems than using Nhost's managed service. Hopefully this setup template will make it easier.
 
-This setup is designed to make it as easy as possible to use with normal Nhost development flow.
+This setup is designed to make it as easy as possible to use with normal Nhost development flow. You don't use docker on your development computer, only use the nhost cli, and the existing templates to deploy.
 
 ## Config
 
