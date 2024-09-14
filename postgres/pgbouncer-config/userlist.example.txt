@@ -1,0 +1,2 @@
+"postgres" "secret_password"
+"monitor_user" "secret_password"

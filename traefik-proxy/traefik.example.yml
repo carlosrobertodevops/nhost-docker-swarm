@@ -1,0 +1,50 @@
+# traefik.yml
+
+entryPoints:
+  http:
+    address: ":80"
+  https:
+    address: ":443"
+
+api:
+  dashboard: true
+  insecure: false
+
+ping:
+  entryPoint: http
+  
+log:
+  level: INFO  # Set logging level (INFO, DEBUG, ERROR)
+
+accessLog:
+  bufferingSize: 100  # Buffer logs before writing to disk
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: myname@domain.com
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: http
+
+providers:
+  file:
+    directory: /etc/traefik/dynamic/
+    watch: true
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    swarmMode: true
+    network: traefik-public
+    
+
+# Define middlewares for authentication
+http:
+  middlewares:
+    auth:
+      basicAuth:
+        users:
+          - "myusername:$hashashash"
+
+# Generate a password with `htpasswd -nb user password | openssl base64`
+  

@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.11
+    command:
+      - --configFile=/etc/traefik/dynamic/traefik.yml
+    ports:
+      - "80:80"
+      - "8080:8080"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik.yml:/etc/traefik/dynamic/traefik.yml"  # Bind the traefik.yml file
+      - "letsencrypt:/letsencrypt"              # For Let's Encrypt certificate storage
+    networks:
+      - traefik-public
+    healthcheck:
+      test: 'wget -qO- http://localhost:80/ping || exit 1'
+      interval: 4s
+      timeout: 2s
+      retries: 5
+    deploy:
+      mode: global
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.api.rule=Host(`${TRAEFIK_DOMAIN}`)"
+        - "traefik.http.routers.api.service=api@internal"
+        - "traefik.http.routers.api.entrypoints=https"
+        - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.api.middlewares=auth@file"
+        - "traefik.http.services.dummy-svc.loadbalancer.server.port=9999" # Dummy service to make Traefik start in Docker Swarm
+
+# Manually make one network for Traefik
+networks:
+  traefik-public:
+    external: true
+
+volumes:
+  letsencrypt: 
+    name: traefik-stack_letsencrypt
+    

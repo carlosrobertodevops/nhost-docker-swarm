@@ -1,0 +1,65 @@
+services:
+  agent:
+    image: portainer/agent:2.21.1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    networks:
+      - agent_network
+    deploy:
+      mode: global
+      placement:
+        constraints: [node.platform.os == linux]
+
+  portainer:
+    image: portainer/portainer-ce:2.21.1
+    command: -H tcp://tasks.agent:9001 --tlsskipverify
+    volumes:
+      - portainer_data:/data
+    networks:
+      - agent_network
+      - traefik-public
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.portainer.rule=Host(`${PORTAINER_DOMAIN}`)
+        - traefik.http.routers.portainer.entrypoints=https
+        - traefik.http.routers.portainer.tls.certresolver=letsencrypt
+        - traefik.http.services.portainer.loadbalancer.server.port=9000
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    volumes:
+      - uptime-kuma-data:/app/data
+    networks:
+      - traefik-public
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.kuma.rule=Host(`${KUMA_DOMAIN}`)
+        - traefik.http.routers.kuma.entrypoints=https
+        - traefik.http.routers.kuma.tls.certresolver=letsencrypt
+        - traefik.http.services.kuma.loadbalancer.server.port=3001
+
+networks:
+  agent_network:
+    driver: overlay
+    attachable: true
+    name: portainer-stack_agent_network
+  traefik-public:
+    external: true
+
+# Always explicitly name the volumes and networks, or they will be named after the folder name with 'docker compose convert'
+volumes:
+  portainer_data:
+    name: portainer-stack_portainer_data
+  uptime-kuma-data:
+    name: portainer-stack_uptime-kuma-data

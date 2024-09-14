@@ -1,4 +1,9 @@
 .nhost
 .secrets
 
+.env
+pgbouncer.ini
+userlist.txt
+docker-compose.canonical.yml
+
 node_modules/
