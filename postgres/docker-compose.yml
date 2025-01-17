@@ -5,34 +5,49 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: '${DB_PASSWORD}'
       POSTGRES_DB: postgres
+    # The nhost postgres has a init.sh that sets the postgresql.conf and pg_hba.conf from a template.
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./config/postgresql.conf:/etc/postgresql.conf.tmpl
+      - ./config/pg_hba.conf:/etc/pg_hba.conf.tmpl
+      - ./config/pg_ident.conf:/var/lib/postgresql/data/pgdata/pg_ident.conf
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+           size: 2048000000 # (this means 2GB)
     networks:
       - postgres_network
     deploy:
+      placement:
+        constraints: [node.role == manager]
       replicas: 1
       resources:
         limits:
-          memory: 2G
+          memory: 8G
         reservations:
-          memory: 1G
-    restart: always
+          memory: 4G
     healthcheck:
       test:
         - CMD-SHELL
         - 'pg_isready'
+    logging:
+      driver: "json-file"
 
   pgbouncer:
     image: edoburu/pgbouncer
+    ports:
+      - "6432:6432"  # PgBouncer exposed to the internet
     environment:
       DB_USER: postgres
       DB_PASSWORD: '${DB_PASSWORD}'
-      DB_NAME: postgres
       DB_HOST: postgres
-    ports:
-      - "6432:6432"  # PgBouncer exposed to the internet
+      DB_PORT: 5432
     volumes:
       - ./pgbouncer-config:/etc/pgbouncer  # Optional, if you want to customize later
+      - source: letsencrypt
+        target: /etc/letsencrypt
+        read_only: true
+        type: volume
     networks:
       - postgres_network
       - traefik-public
@@ -46,15 +61,25 @@ services:
       retries: 3
       start_period: 10s
     deploy:
+      placement:
+        constraints: [node.role == manager]
       update_config:
         parallelism: 1
         delay: 10s
+
       replicas: 1
       resources:
         limits:
           memory: 512M
         reservations:
           memory: 256M
+      labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.pgbouncer.rule=HostSNI(`${POSTGRES_DOMAIN}`)"
+      - "traefik.tcp.routers.pgbouncer.entrypoints=pgbouncer"
+      - "traefik.tcp.routers.pgbouncer.tls=true"
+      - "traefik.tcp.routers.pgbouncer.tls.certresolver=letsencrypt"
+      - "traefik.tcp.services.pgbouncer.loadbalancer.server.port=6432"
 
 
 # Always explicitly name the volumes and networks, or they will be named after the folder name with 'docker compose convert'
@@ -62,12 +87,21 @@ networks:
   postgres_network:
     driver: overlay
     name: postgres-stack_postgres_network
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
   traefik-public:
     external: true  # Existing public network you mentioned
+    name: traefik-public
+  monitoring:
+    external: true  # Existing public network you mentioned
+    name: portainer-stack_monitoring
 
 volumes:
   postgres_data: 
     external: true  # For safety, create this volume manually
+  letsencrypt:
+    external: true
+    name: traefik-stack_letsencrypt
 
 
 # Should use docker exec -it <pgbouncer-container-id> kill -SIGHUP 1 after updating any pgbouncer data
