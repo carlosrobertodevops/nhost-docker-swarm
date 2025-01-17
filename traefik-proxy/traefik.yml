@@ -1,0 +1,64 @@
+# traefik.yml
+
+entryPoints:
+  http:
+    address: ":80"
+  https:
+    address: ":443"
+  pgbouncer:
+    address: ":6432"
+  pgcat:
+    address: ":6433"
+  redis:
+    address: ":6379"
+  metrics:
+    address: :8082
+
+api:
+  dashboard: true
+  insecure: false
+
+ping:
+  entryPoint: http
+  
+log:
+  level: INFO  # Set logging level (INFO, DEBUG, ERROR)
+
+accessLog:
+  bufferingSize: 100  # Buffer logs before writing to disk
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: myname@gmail.com
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: http
+
+providers:
+  file:
+    directory: /etc/traefik/dynamic/
+    watch: true
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    swarmMode: true
+    network: traefik-public
+    
+
+# Define middlewares for authentication
+http:
+  middlewares:
+    auth:
+      basicAuth:
+        users:
+          - "user:$hashed_pw" # Use the hash from htpasswd -nb user password
+
+
+
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    entryPoint: metrics

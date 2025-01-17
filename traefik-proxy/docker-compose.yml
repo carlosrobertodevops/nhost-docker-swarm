@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   traefik:
     image: traefik:v2.11
@@ -9,19 +7,34 @@ services:
       - "80:80"
       - "8080:8080"
       - "443:443"
+      - "8082:8082" # metrics
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./traefik.yml:/etc/traefik/dynamic/traefik.yml"  # Bind the traefik.yml file
       - "letsencrypt:/letsencrypt"              # For Let's Encrypt certificate storage
     networks:
       - traefik-public
+      - monitoring
     healthcheck:
       test: 'wget -qO- http://localhost:80/ping || exit 1'
       interval: 4s
       timeout: 2s
       retries: 5
     deploy:
-      mode: global
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      placement:
+        constraints:
+          - node.role == manager
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.api.rule=Host(`${TRAEFIK_DOMAIN}`)"
@@ -30,11 +43,37 @@ services:
         - "traefik.http.routers.api.tls.certresolver=letsencrypt"
         - "traefik.http.routers.api.middlewares=auth@file"
         - "traefik.http.services.dummy-svc.loadbalancer.server.port=9999" # Dummy service to make Traefik start in Docker Swarm
+        - app_name=traefik
+        - environment=production
+
+  traefik-certs-dumper:
+    image: ldez/traefik-certs-dumper:v2.8.3
+    entrypoint: sh -c '
+      apk add jq
+      ; while ! [ -e /data/acme.json ]
+      || ! [ `jq ".[] | .Certificates | length" /data/acme.json` != 0 ]; do
+      sleep 1
+      ; done
+      && traefik-certs-dumper file --version v2 --watch --domain-subdir=true
+      --source /data/acme.json --dest /data/certs --post-hook "sh /certs-post-hook.sh"'
+    volumes:
+      - letsencrypt:/data
+      - ./certs-post-hook.sh:/certs-post-hook.sh:ro
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
 
 # Manually make one network for Traefik
 networks:
   traefik-public:
     external: true
+    name: traefik-public
+  monitoring:
+    external: true
+    name: portainer-stack_monitoring
 
 volumes:
   letsencrypt: 
