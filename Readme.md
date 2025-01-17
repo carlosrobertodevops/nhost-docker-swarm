@@ -83,60 +83,47 @@ You can use this cloud-init on Hetzner, Vultr and other server providers that su
 #cloud-config
 package_update: true
 package_upgrade: true
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - software-properties-common
+  - gnupg
+  - lsb-release
+  - fail2ban
 
 runcmd:
-  # 1. Install necessary packages and Docker dependencies
-  - apt-get update && apt-get install -y \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    software-properties-common \
-    gnupg-agent \
-    lsb-release
-
-  # 2. Add Docker's official GPG key and repository
-  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-  - add-apt-repository \
-    "deb [arch=amd64] https://download.docker.com/linux/$(lsb_release -cs) stable"
-
-  # 3. Install Docker CE, Docker CLI, and containerd
-  - apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io
-
-  # 4. Add the 'docker' group and current user to the group (if using non-root user)
+  - for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - apt-get update
+  - apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+  - groupadd docker
   - usermod -aG docker $USER
-
-  # 5. Enable and start Docker service
   - systemctl enable docker
   - systemctl start docker
+  #- docker swarm init --advertise-addr $(hostname -I | awk '{print $1}')
 
-  # 6. Set up Docker Swarm (initiate manager node)
-  - docker swarm init --advertise-addr $(hostname -I | awk '{print $1}')
+  - curl -fsSL https://azlux.fr/repo.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/azlux-archive-keyring.gpg
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/azlux-archive-keyring.gpg] http://packages.azlux.fr/debian $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/azlux.list >/dev/null
 
-  # 7. Configure UFW firewall to allow necessary ports for Docker Swarm
   - ufw allow OpenSSH
-  - ufw allow 2376/tcp  # Docker daemon
-  - ufw allow 2377/tcp  # Docker Swarm cluster management
-  - ufw allow 7946/tcp  # Docker Swarm node communication
-  - ufw allow 7946/udp  # Docker Swarm node communication
-  - ufw allow 4789/udp  # Docker Swarm overlay network
-  - ufw allow 443/tcp   # HTTPS traffic (optional, if using Traefik or another proxy)
-  - ufw allow 80/tcp    # HTTP traffic (optional, if using Traefik or another proxy)
-  - ufw allow 6432/tcp    # If you want to connect to pgbouncer from the internet
+  - ufw allow 2376/tcp # Docker
+  - ufw allow 2377/tcp # Docker Swarm
+  - ufw allow 7946/tcp # Docker Swarm
+  - ufw allow 7946/udp # Docker Swarm
+  - ufw allow 4789/udp # Docker Swarm
+  - ufw allow 443/tcp # HTTPS
+  - ufw allow 80/tcp # HTTP
+  - ufw allow 6432/tcp # PgBouncer
+  - ufw allow 9001/tcp # Portainer
   - ufw --force enable
-
-  # 8. Enable Docker Swarm configuration and logging (create default directory for persistent logs)
-  - mkdir -p /var/log/docker
-  - touch /var/log/docker/docker.log
-
-  # 9. Restart Docker to apply logging configuration
   - systemctl restart docker
-
-  # 10. Install and configure fail2ban for SSH security
-  - apt-get install -y fail2ban
   - systemctl enable fail2ban
   - systemctl start fail2ban
 
-# 11. Add a MOTD for Docker Swarm
 write_files:
   - path: /etc/docker/daemon.json
     content: |
@@ -145,7 +132,8 @@ write_files:
         "log-opts": {
           "max-size": "10m",
           "max-file": "3"
-        }
+        },
+        "mtu": 1450
       }
   - path: /etc/motd
     content: |
@@ -153,13 +141,12 @@ write_files:
       - Docker version: $(docker --version)
       - Swarm initialized: Yes
 
-# 12. (Optional) Automatically clean up unused Docker resources weekly
   - path: /etc/cron.weekly/docker-cleanup
     permissions: '0755'
     content: |
       #!/bin/bash
-      docker system prune -af
-
+      docker container prune -f
+      docker image prune -f
 ```
 
 
