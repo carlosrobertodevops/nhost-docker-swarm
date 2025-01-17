@@ -31,13 +31,13 @@ The project consists of several "stacks" in Docker Swarm. They are deployed with
 
 In the postgres folder postgres and pgbouncer are configured. These are necessary for Nhost, but could live on their own server. You can also skip this stack if you use managed Postgres by Neon or other provider.
 
-There is one script for creating a new "database" within postgres and makes it ready for Nhost. Useful if you have several Nhost apps that use the same Postgres instance. Another sql file makes a new monitor with no privileges, that can only be used to test the connection in Kuma.
+There is one script for creating a new "database" within postgres and makes it ready for Nhost. Useful if you have several Nhost apps that use the same Postgres instance. Another sql file makes a new monitor user with no privileges, that can only be used to test the connection in Kuma.
 
 
 ### nhost
 
 The nhost stack is Hasura, Nhost Auth and Nhost Storage. This stack is stateless and can be replicated across servers without any issue.
-Storage is optional, as you can use Nhost without using Nhost storage, but it is correctly configured. This setup does not include its own Minio, so you need to set that up or use Amazon S3, Cloudflare R2 or similar.
+Storage is optional, as you can use Nhost without using Nhost storage, but it is correctly configured. This setup does not include its own Minio, so you need to set that up, or use Amazon S3, Cloudflare R2 or similar.
 For Nhost auth, you need to make sure the email templates are mounted correctly. This is done by rsync in this setup.
 For Hasura, you need to do migrations and update metadata manually (or make a script if you want). Just use the Hasura client and do `hasura migrate apply --admin-secret ADMIN_SECRET --database-name default --endpoint hasura-app1.mydomain.com` and `hasura metadata apply --admin-secret ADMIN_SECRET --endpoint hasura-app1.mydomain.com`. Be in the nhost folder when you do this, and it will apply your local changes to production.
 
@@ -55,12 +55,13 @@ Each service/container that should be reached from the internet needs to add som
 deploy: 
     labels:
         - traefik.enable=true
-        - traefik.http.routers.hasura.rule=Host(`${HASURA_DOMAIN}`)
-        - traefik.http.routers.hasura.entrypoints=https
-        - traefik.http.routers.hasura.tls.certresolver=letsencrypt
-        - traefik.http.services.hasura.loadbalancer.server.port=8080
+        - traefik.http.routers.hasura-app1.rule=Host(`${HASURA_DOMAIN}`)
+        - traefik.http.routers.hasura-app1.entrypoints=https
+        - traefik.http.routers.hasura-app1.tls.certresolver=letsencrypt
+        - traefik.http.services.hasura-app1.loadbalancer.server.port=8080
 ```
 
+Remember to update the router and service name in the labels here when you copy it from one service to another. I often forget to do this, and it causes Traefik to not find my services.
 
 ### portainer (and kuma)
 
@@ -73,7 +74,7 @@ Kuma is an uptime monitor. It's completely optional to use it, but it's good to 
 
 You obviously need a server to deploy to. It needs to have docker installed and the public ssh key of a ssh you have on your computer.
 
-After you start the server, ssh into it and enable docker swarm with `docker swarm init`, create the network `docker network create traefik-public` and volume `docker volume create postgres_data`.
+After you start the server, ssh into it and enable docker swarm with `docker swarm init`, create the network `docker network create --driver overlay traefik-public` and volume `docker volume create postgres_data`.
 
 
 You can use this cloud-init on Hetzner, Vultr and other server providers that supports cloud-init:
@@ -126,7 +127,6 @@ runcmd:
   # 8. Enable Docker Swarm configuration and logging (create default directory for persistent logs)
   - mkdir -p /var/log/docker
   - touch /var/log/docker/docker.log
-  - echo '{"log-driver": "json-file", "log-opts": {"max-size": "10m", "max-file": "3"}}' > /etc/docker/daemon.json
 
   # 9. Restart Docker to apply logging configuration
   - systemctl restart docker
@@ -138,6 +138,15 @@ runcmd:
 
 # 11. Add a MOTD for Docker Swarm
 write_files:
+  - path: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
   - path: /etc/motd
     content: |
       Welcome to your Docker Swarm manager node!
@@ -160,8 +169,18 @@ If you set up Traefik, the Postgres and optionally portainer, you can use these 
 
 
 ## Migrate Nhost apps 
-Coming
 
+You need to install `postgresql-client-common` and `postgresql-client` to use pg_dump and pg_restore. You can do it from your computer, but the dump can be large, so you can also do it from your server.
+
+`pg_dump -h nhostsubdomain.db.eu-central-1.nhost.run -U postgres -p 5432 -d nhostsubdomain -F c -f ./mydb-backup/backup.dump`
+
+`pg_restore -h your.server.ip -U postgres -p 6432 -d your_app_database_name -F c --clean ./mydb-backup-backup/backup.dump`
+
+Note that you should run all Hasura migrations before doing this. The database also needs to be configured with the correct users and table ownership.
+
+There will be a "gap" in the data while you migrate this way, so you should make it a scheduled downtime if you have many users. 
+
+Continuous replication is possible in Postgres, but we don't have enough control over the database in managed Nhost to do that.
 
 ## Read more
 
