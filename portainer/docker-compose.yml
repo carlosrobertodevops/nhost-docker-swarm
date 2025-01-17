@@ -8,8 +8,38 @@ services:
       - agent_network
     deploy:
       mode: global
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 32M
       placement:
-        constraints: [node.platform.os == linux]
+        constraints: 
+          - node.platform.os == linux
+          - node.role == manager
+  # https://github.com/portainer/portainer/issues/8256
+  agent_worker:
+    image: portainer/agent:2.21.1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    networks:
+      - agent_network
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 32M
+      placement:
+        constraints: 
+          - node.platform.os == linux
+          - node.role != manager
+      labels:
+        - "app_name=agent_worker"
+        - "environment=production"
+        - "service_name=portainer"
 
   portainer:
     image: portainer/portainer-ce:2.21.1
@@ -24,12 +54,20 @@ services:
       replicas: 1
       placement:
         constraints: [node.role == manager]
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
       labels:
         - traefik.enable=true
         - traefik.http.routers.portainer.rule=Host(`${PORTAINER_DOMAIN}`)
         - traefik.http.routers.portainer.entrypoints=https
         - traefik.http.routers.portainer.tls.certresolver=letsencrypt
         - traefik.http.services.portainer.loadbalancer.server.port=9000
+        - "app_name=portainer"
+        - "environment=production"
+        - "service_name=portainer"
 
   uptime-kuma:
     image: louislam/uptime-kuma:1
@@ -42,6 +80,11 @@ services:
       replicas: 1
       placement:
         constraints: [node.role == manager]
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
       labels:
         - traefik.enable=true
         - traefik.http.routers.kuma.rule=Host(`${KUMA_DOMAIN}`)
@@ -49,13 +92,177 @@ services:
         - traefik.http.routers.kuma.tls.certresolver=letsencrypt
         - traefik.http.services.kuma.loadbalancer.server.port=3001
 
+  grafana:
+    image: grafana/grafana:latest
+    networks:
+      - monitoring
+      - traefik-public
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.grafana.rule=Host(`${GRAFANA_DOMAIN}`)
+        - traefik.http.routers.grafana.entrypoints=https
+        - traefik.http.routers.grafana.tls.certresolver=letsencrypt
+        - traefik.http.services.grafana.loadbalancer.server.port=3000
+
+  loki:
+    image: grafana/loki:latest
+    networks:
+      - monitoring
+    #tmpfs:
+    #  - /loki
+    volumes:
+      - ./loki_data:/loki_data
+      #- loki_data:/lokidir
+      - ./loki-config.yaml:/etc/loki/loki-config.yaml
+    command: 
+      - -config.file=/etc/loki/loki-config.yaml
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - "/var/log:/var/log"
+      - "/var/lib/docker/containers:/var/lib/docker/containers"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/etc/localtime:/etc/localtime:ro"
+    configs:
+      - source: promtail-config
+        target: /etc/promtail/config.yml
+    command: "-config.file=/etc/promtail/config.yml -config.expand-env=true"
+    networks:
+      - monitoring
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints: [node.platform.os == linux]
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
+
+  # Some of this copied from https://github.com/vegasbrianc/prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - prometheus_data:/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command: 
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    networks:
+      - monitoring
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      resources:  
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.prometheus.rule=Host(`${PROMETHEUS_DOMAIN}`)
+        - traefik.http.routers.prometheus.entrypoints=https
+        - traefik.http.routers.prometheus.tls.certresolver=letsencrypt
+        - traefik.http.services.prometheus.loadbalancer.server.port=9090
+        - traefik.http.routers.prometheus.middlewares=auth@file
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/kmsg:/dev/kmsg:ro
+    networks:
+      - monitoring
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints: [node.platform.os == linux]
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command: 
+      - '--path.procfs=/host/proc' 
+      - '--path.sysfs=/host/sys'
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+    networks:
+      - monitoring
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints: [node.platform.os == linux]
+      resources:
+        limits:
+          memory: 16M
+        reservations:
+          memory: 8M
+      
+      
+
 networks:
   agent_network:
     driver: overlay
     attachable: true
     name: portainer-stack_agent_network
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
   traefik-public:
     external: true
+    name: traefik-public
+  monitoring:
+    driver: overlay
+    attachable: true
+    name: portainer-stack_monitoring
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
 
 # Always explicitly name the volumes and networks, or they will be named after the folder name with 'docker compose convert'
 volumes:
@@ -63,3 +270,13 @@ volumes:
     name: portainer-stack_portainer_data
   uptime-kuma-data:
     name: portainer-stack_uptime-kuma-data
+  grafana_data:
+    name: portainer-stack_grafana_data
+  prometheus_data:
+    name: portainer-stack_prometheus_data
+
+configs:
+  promtail-config:
+    name: promtail-config.yml
+    file: ./promtail-config.yml
+    
