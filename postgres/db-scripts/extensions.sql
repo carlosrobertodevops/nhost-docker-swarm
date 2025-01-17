@@ -1,0 +1,13 @@
+-- Install required extensions in the public schema
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public;
+
+CREATE EXTENSION IF NOT EXISTS hypopg WITH SCHEMA public;
+
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
+
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
+
+CREATE EXTENSION IF NOT EXISTS timescaledb WITH SCHEMA public;
+
