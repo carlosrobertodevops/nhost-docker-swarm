@@ -1,0 +1,10 @@
+# Mount the email templates into the image so that it can run on multiple nodes.
+
+# Use the original nhost/hasura-auth image as the base
+FROM nhost/hasura-auth:0.33.0
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the email templates into the image
+COPY ./nhost/emails /app/email-templates
