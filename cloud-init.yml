@@ -1,0 +1,67 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - software-properties-common
+  - gnupg
+  - lsb-release
+  - fail2ban
+
+runcmd:
+  - for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - apt-get update
+  - apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+  - groupadd docker
+  - usermod -aG docker $USER
+  - systemctl enable docker
+  - systemctl start docker
+  #- docker swarm init --advertise-addr $(hostname -I | awk '{print $1}')
+
+  - curl -fsSL https://azlux.fr/repo.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/azlux-archive-keyring.gpg
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/azlux-archive-keyring.gpg] http://packages.azlux.fr/debian $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/azlux.list >/dev/null
+
+  - ufw allow OpenSSH
+  - ufw allow 2376/tcp # Docker
+  - ufw allow 2377/tcp # Docker Swarm
+  - ufw allow 7946/tcp # Docker Swarm
+  - ufw allow 7946/udp # Docker Swarm
+  - ufw allow 4789/udp # Docker Swarm
+  - ufw allow 443/tcp # HTTPS
+  - ufw allow 80/tcp # HTTP
+  - ufw allow 6432/tcp # PgBouncer
+  - ufw allow 9001/tcp # Portainer
+  - ufw --force enable
+  - systemctl restart docker
+  - systemctl enable fail2ban
+  - systemctl start fail2ban
+
+write_files:
+  - path: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        },
+        "mtu": 1450
+      }
+  - path: /etc/motd
+    content: |
+      Welcome to your Docker Swarm manager node!
+      - Docker version: $(docker --version)
+      - Swarm initialized: Yes
+
+  - path: /etc/cron.weekly/docker-cleanup
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      docker container prune -f
+      docker image prune -f
