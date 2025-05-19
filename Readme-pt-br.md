@@ -58,4 +58,102 @@ rótulos:
 - traefik.http.services.hasura-app1.loadbalancer.server.port=8080
 ```
 
-Lembre-se de atualizar o nome do roteador e do serviço nos rótulos aqui ao copiá-los de um serviço para outro
+Lembre-se de atualizar o nome do roteador e do serviço nos rótulos aqui ao copiá-lo de um serviço para outro. Muitas vezes esqueço de fazer isso, e isso faz com que o Traefik não encontre meus serviços.
+
+portainer (e kuma)
+O Portainer é um painel para o seu Docker Swarm. Ele permite que você visualize contêineres, servidores, volumes etc. no navegador, sem usar o Docker diretamente com SSH no servidor.
+
+O Kuma é um monitor de tempo de atividade. Seu uso é totalmente opcional, mas é bom ser notificado se algo der errado, mesmo que você não deva executar o monitor de tempo de atividade no mesmo servidor que está monitorando.
+
+Servidor
+Você obviamente precisa de um servidor para implantar. Ele precisa ter o Docker instalado e a chave SSH pública de um SSH que você tenha no seu computador.
+
+Após iniciar o servidor, acesse-o via SSH e habilite o Docker Swarm com o comando docker swarm init, crie a rede docker network create --driver overlay traefik-public e o volume docker volume create postgres_data.
+
+Você pode usar este cloud-init em servidores Hetzner, Vultr e outros que suportem cloud-init:
+
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+- apt-transport-https
+- ca-certificates
+- curl
+- software-properties-common
+- gnupg
+- lsb-release
+- fail2ban
+
+runcmd:
+- for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; concluído
+- instalar -m 0755 -d /etc/apt/keyrings
+- curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+- chmod a+r /etc/apt/keyrings/docker.asc
+- echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") estável" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+- apt-get update
+- apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+- groupadd docker
+- usermod -aG docker $USER
+- systemctl enable docker
+- systemctl start docker
+#- docker swarm init --advertise-addr $(hostname -I | awk '{print $1}')
+
+- curl -fsSL https://azlux.fr/repo.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/azlux-archive-keyring.gpg
+- echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/azlux-archive-keyring.gpg] http://packages.azlux.fr/debian $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/azlux.list >/dev/null
+
+- ufw allow OpenSSH
+- ufw allow 2376/tcp # Docker
+- ufw allow 2377/tcp # Docker Swarm
+- ufw allow 7946/tcp # Docker Swarm
+- ufw allow 7946/udp # Docker Swarm
+- ufw allow 4789/udp # Docker Swarm
+- ufw allow 443/tcp # HTTPS
+- ufw allow 80/tcp # HTTP
+- ufw allow 6432/tcp # PgBouncer
+- ufw allow 9001/tcp # Portainer
+- ufw --force enable
+- systemctl restart docker
+- systemctl enable fail2ban
+- systemctl start fail2ban
+
+write_files:
+- caminho: /etc/docker/daemon.json
+conteúdo: |
+{
+"log-driver": "json-file",
+"log-opts": {
+"max-size": "10m",
+"max-file": "3"
+},
+"mtu": 1450
+}
+- caminho: /etc/motd
+conteúdo: |
+Bem-vindo ao seu nó gerenciador do Docker Swarm!
+- Versão do Docker: $(docker --version)
+- Inicialização do Swarm: Sim
+
+- caminho: /etc/cron.weekly/docker-cleanup
+permissões: '0755'
+conteúdo: |
+#!/bin/bash
+docker container prune -f
+docker image prune -f
+Adicionar mais aplicativos Nhost
+Se você configurar o Traefik, o Postgres e, opcionalmente, o Portainer, poderá usá-los para muitos aplicativos Nhost. Basta configurar o conteúdo da pasta nhost com as variáveis ​​de ambiente e os rótulos de implantação corretos.
+
+Migrar aplicativos Nhost
+Você precisa instalar postgresql-client-common e postgresql-client para usar pg_dump e pg_restore. Você pode fazer isso do seu computador, mas o dump pode ser grande, então você também pode fazer isso do seu servidor.
+
+pg_dump -h nhostsubdomain.db.eu-central-1.nhost.run -U postgres -p 5432 -d nhostsubdomain -F c -f ./mydb-backup/backup.dump
+
+pg_restore -h your.server.ip -U postgres -p 6432 -d your_app_database_name -F c --clean ./mydb-backup-backup/backup.dump
+
+Observe que você deve executar todas as migrações do Hasura antes de fazer isso. O banco de dados também precisa ser configurado com os usuários e proprietários de tabela corretos.
+
+Haverá uma "lacuna" nos dados durante a migração dessa forma, portanto, programe-a para um período de inatividade caso tenha muitos usuários.
+
+A replicação contínua é possível no Postgres, mas não temos controle suficiente sobre o banco de dados no Nhost gerenciado para isso.
+
+Leia mais
+Se não tiver certeza, leia e tente entender os diversos arquivos docker-compose e de configuração. Pergunte ao ChatGPT ou pesquise na internet para aprender informações úteis sobre hospedagem própria.
