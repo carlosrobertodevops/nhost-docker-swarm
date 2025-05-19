@@ -48,14 +48,14 @@ Você pode ver um painel do Traefik se definir o domínio como, por exemplo, tra
 
 Cada serviço/contêiner que deve ser acessado pela internet precisa adicionar alguns rótulos para que o Traefik os roteie automaticamente. Exemplo
 ```yaml
-# docker-compose.yml na pasta nhost para Hasura
-deploy:
-rótulos:
-- traefik.enable=true
-- traefik.http.routers.hasura-app1.rule=Host(`${HASURA_DOMAIN}`)
-- traefik.http.routers.hasura-app1.entrypoints=https
-- traefik.http.routers.hasura-app1.tls.certresolver=letsencrypt
-- traefik.http.services.hasura-app1.loadbalancer.server.port=8080
+# docker-compose.yml in nhost folder for Hasura
+deploy: 
+    labels:
+        - traefik.enable=true
+        - traefik.http.routers.hasura-app1.rule=Host(`${HASURA_DOMAIN}`)
+        - traefik.http.routers.hasura-app1.entrypoints=https
+        - traefik.http.routers.hasura-app1.tls.certresolver=letsencrypt
+        - traefik.http.services.hasura-app1.loadbalancer.server.port=8080
 ```
 
 Lembre-se de atualizar o nome do roteador e do serviço nos rótulos aqui ao copiá-lo de um serviço para outro. Muitas vezes esqueço de fazer isso, e isso faz com que o Traefik não encontre meus serviços.
