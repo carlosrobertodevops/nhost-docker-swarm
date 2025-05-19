@@ -15,11 +15,16 @@ Observe que você não pode usar proxy com o Cloudflare se usar subdomínios ani
 ### Senhas
 Edite os arquivos .env com seu segredo JWT, segredo Hasura, etc.
 Você precisa escolher uma senha forte para o banco de dados em produção. Gere uma string aleatória com `tr -dc 'a-zA-Z0-9' </dev/urandom | head -c 64; echo`
-As conexões com o banco de dados são feitas através do pgbouncer, o que requer mais configuração. Edite postgres/pgbouncer-config/pgbouncer.ini e postgres/pgbouncer-config/userlist.txt para corresponder às suas conexões com o banco de dados e usuários.
+As conexões com o banco de dados são feitas através do pgbouncer, o que requer mais configuração. 
+
+Edite postgres/pgbouncer-config/pgbouncer.ini e postgres/pgbouncer-config/userlist.txt para corresponder às suas conexões com o banco de dados e usuários.
 Conexões feitas internamente no servidor podem usar nomes de contêineres do Docker em vez de IPs ou nomes de domínio.
+
 Exemplo `app1 = host=postgres port=5432 dbname=app1 user=postgres password=randompassword` o host é postgres porque esse é o nome do contêiner no Docker.
+
 O Pgbouncer está na porta 6432 por padrão, enquanto o Postgres está na porta 5432. Nesta configuração, o Postgres não é a internet aberta, mas o pgbouncer é. Ajuste as variáveis ​​de ambiente e as redes do Docker se precisar de algo mais.
-O SSL não está configurado para o Postgres, portanto, tenha cuidado ao conectar-se ao banco de dados se fizer isso do seu computador.
+
+**O SSL não está configurado para o Postgres**, portanto, tenha cuidado ao conectar-se ao banco de dados se fizer isso do seu computador.
 
 ## Pilhas do Docker
 
