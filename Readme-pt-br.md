@@ -161,5 +161,5 @@ Haverá uma "lacuna" nos dados durante a migração dessa forma, portanto, progr
 
 A replicação contínua é possível no Postgres, mas não temos controle suficiente sobre o banco de dados no Nhost gerenciado para isso.
 
-Leia mais
+# Leia mais
 Se não tiver certeza, leia e tente entender os diversos arquivos docker-compose e de configuração. Pergunte ao ChatGPT ou pesquise na internet para aprender informações úteis sobre hospedagem própria.
