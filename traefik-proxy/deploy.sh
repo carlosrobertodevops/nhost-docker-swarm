@@ -7,10 +7,10 @@ docker compose -f ./traefik-proxy/docker-compose.yml convert --no-path-resolutio
 sed -i 's/published: "\(.*\)"/published: \1/' ./traefik-proxy/docker-compose.canonical.yml
 
 # Sync the files to the remote server using rsync
-rsync -avz --delete ./traefik-proxy/ root@199.199.199.199:/root/traefik-proxy/
+rsync -avz --delete ./traefik-proxy/ root@91.99.135.154:/root/traefik-proxy/
 
 # Log in to the remote server and deploy the stack using docker
-ssh root@199.199.199.199 << 'EOF'
+ssh root@91.99.135.154 << 'EOF'
   # Navigate to the folder where the docker-compose.canonical.yml is located
   cd /root/traefik-proxy/
 
