@@ -14,7 +14,7 @@ services:
         reservations:
           memory: 32M
       placement:
-        constraints: 
+        constraints:
           - node.platform.os == linux
           - node.role == manager
   # https://github.com/portainer/portainer/issues/8256
@@ -33,7 +33,7 @@ services:
         reservations:
           memory: 32M
       placement:
-        constraints: 
+        constraints:
           - node.platform.os == linux
           - node.role != manager
       labels:
@@ -130,7 +130,7 @@ services:
       - ./loki_data:/loki_data
       #- loki_data:/lokidir
       - ./loki-config.yaml:/etc/loki/loki-config.yaml
-    command: 
+    command:
       - -config.file=/etc/loki/loki-config.yaml
     deploy:
       mode: replicated
@@ -174,7 +174,7 @@ services:
     volumes:
       - prometheus_data:/prometheus
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    command: 
+    command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
       - --web.enable-lifecycle
@@ -185,7 +185,7 @@ services:
       replicas: 1
       placement:
         constraints: [node.role == manager]
-      resources:  
+      resources:
         limits:
           memory: 512M
         reservations:
@@ -226,9 +226,9 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
-    command: 
-      - '--path.procfs=/host/proc' 
-      - '--path.sysfs=/host/sys'
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
       - --collector.filesystem.ignored-mount-points
       - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
     networks:
@@ -244,8 +244,6 @@ services:
           memory: 16M
         reservations:
           memory: 8M
-      
-      
 
 networks:
   agent_network:
@@ -279,4 +277,3 @@ configs:
   promtail-config:
     name: promtail-config.yml
     file: ./promtail-config.yml
-    
