@@ -10,13 +10,13 @@ services:
       - "8082:8082" # metrics
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./traefik.yml:/etc/traefik/dynamic/traefik.yml"  # Bind the traefik.yml file
-      - "letsencrypt:/letsencrypt"              # For Let's Encrypt certificate storage
+      - "./traefik.yml:/etc/traefik/dynamic/traefik.yml" # Bind the traefik.yml file
+      - "letsencrypt:/letsencrypt" # For Let's Encrypt certificate storage
     networks:
       - traefik-public
       - monitoring
     healthcheck:
-      test: 'wget -qO- http://localhost:80/ping || exit 1'
+      test: "wget -qO- http://localhost:80/ping || exit 1"
       interval: 4s
       timeout: 2s
       retries: 5
@@ -76,6 +76,5 @@ networks:
     name: portainer-stack_monitoring
 
 volumes:
-  letsencrypt: 
+  letsencrypt:
     name: traefik-stack_letsencrypt
-    
