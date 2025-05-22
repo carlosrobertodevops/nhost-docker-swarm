@@ -15,5 +15,5 @@ sed -i 's/published: "\(.*\)"/published: \1/' ./traefik-proxy/docker-compose.can
 #   cd /root/traefik-proxy/
 
 #   # Deploy the stack using docker stack deploy --resolve-image always
-#   docker stack deploy -c docker-compose.canonical.yml traefik-stack --resolve-image always --detach
+#   docker stack deploy -c ./traefik-proxy/docker-compose.canonical.yml traefik-stack --resolve-image always --detach
 # EOF

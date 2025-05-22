@@ -22,5 +22,5 @@ docker compose -f ./nhost/docker-compose.yml convert --no-path-resolution | grep
 #   cd /root/nhost-$APP_NAME/
 
 #   # Deploy the stack using docker stack deploy
-#   docker stack deploy -c docker-compose.canonical.yml nhost-$APP_NAME-stack --detach --resolve-image always
+#   docker stack deploy -c ./nhost/docker-compose.canonical.yml nhost-$APP_NAME-stack --detach --resolve-image always
 # EOF

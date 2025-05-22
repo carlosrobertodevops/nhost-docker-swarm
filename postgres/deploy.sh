@@ -16,7 +16,7 @@ sed -i 's/size: "\(.*\)"/size: \1/' ./postgres/docker-compose.canonical.yml
 #   cd /root/postgres/
 
 #   # Deploy the stack using docker stack deploy
-#   docker stack deploy -c docker-compose.canonical.yml postgres-stack --resolve-image always --detach
+#   docker stack deploy -c ./postgres/docker-compose.canonical.yml postgres-stack --resolve-image always --detach
 
 #   # Find the running PgBouncer container
 #   PGB_CONTAINER_ID=\$(docker ps -q --filter "name=postgres-stack_pgbouncer")
