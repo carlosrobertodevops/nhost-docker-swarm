@@ -1,1 +1,12 @@
-version: 3
+# version: 3
+auth:
+  email:
+    enabled: true
+    signIn:
+      enabled: true
+    signUp:
+      enabled: true
+    passwordReset:
+      enabled: true
+    emailVerification:
+      enabled: true

@@ -19,5 +19,5 @@ sed -i 's/published: "\(.*\)"/published: \1/' ./portainer/docker-compose.canonic
 #   chmod -R 755 ./loki_data
 
 #   # Deploy the stack using docker stack deploy --resolve-image always 
-#   docker stack deploy -c docker-compose.canonical.yml portainer-stack --resolve-image always --detach
+#   docker stack deploy -c ./portainer/docker-compose.canonical.yml portainer-stack --resolve-image always --detach
 # EOF
