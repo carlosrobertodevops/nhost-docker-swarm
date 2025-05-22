@@ -14,35 +14,52 @@ Observe que você não pode usar proxy com o Cloudflare se usar subdomínios ani
 
 ### Senhas
 Edite os arquivos .env com seu segredo JWT, segredo Hasura, etc.
-Você precisa escolher uma senha forte para o banco de dados em produção. Gere uma string aleatória com `tr -dc 'a-zA-Z0-9' </dev/urandom | head -c 64; echo`
+Você precisa escolher uma senha forte para o banco de dados em produção. 
+
+Gere uma string aleatória com `tr -dc 'a-zA-Z0-9' </dev/urandom | head -c 64; echo`
+
 As conexões com o banco de dados são feitas através do pgbouncer, o que requer mais configuração. 
 
 Edite postgres/pgbouncer-config/pgbouncer.ini e postgres/pgbouncer-config/userlist.txt para corresponder às suas conexões com o banco de dados e usuários.
+
 Conexões feitas internamente no servidor podem usar nomes de contêineres do Docker em vez de IPs ou nomes de domínio.
 
 Exemplo `app1 = host=postgres port=5432 dbname=app1 user=postgres password=randompassword` o host é postgres porque esse é o nome do contêiner no Docker.
 
-O Pgbouncer está na porta 6432 por padrão, enquanto o Postgres está na porta 5432. Nesta configuração, o Postgres não é a internet aberta, mas o pgbouncer é. Ajuste as variáveis ​​de ambiente e as redes do Docker se precisar de algo mais.
+O Pgbouncer está na porta 6432 por padrão, enquanto o Postgres está na porta 5432. Nesta configuração, o Postgres não é a internet aberta, mas o pgbouncer é. 
+
+Ajuste as variáveis ​​de ambiente e as redes do Docker se precisar de algo mais.
 
 **O SSL não está configurado para o Postgres**, portanto, tenha cuidado ao conectar-se ao banco de dados se fizer isso do seu computador.
 
 ## Pilhas do Docker
 
-O projeto consiste em várias "pilhas" no Docker Swarm. Elas são implantadas com um script bash. Acesse a pasta raiz do projeto e execute algo como `./traefik-proxy/deploy.sh`. Cada pilha tem algumas variáveis ​​de ambiente que você precisa definir.
+O projeto consiste em várias "pilhas" no Docker Swarm. Elas são implantadas com um script bash. 
+
+Acesse a pasta raiz do projeto e execute algo como `./traefik-proxy/deploy.sh`. Cada pilha tem algumas variáveis ​​de ambiente que você precisa definir.
 
 ### postgres
 
-Na pasta postgres, o postgres e o pgbouncer são configurados. Eles são necessários para o Nhost, mas podem estar em seus próprios servidores. Você também pode pular esta pilha se usar o Postgres gerenciado pela Neon ou outro provedor.
+Na pasta postgres, o postgres e o pgbouncer são configurados. Eles são necessários para o Nhost, mas podem estar em seus próprios servidores. 
 
-Existe um script para criar um novo "banco de dados" dentro do Postgres e prepará-lo para o Nhost. Útil se você tiver vários aplicativos Nhost que usam a mesma instância do Postgres. Outro arquivo SQL cria um novo usuário monitor sem privilégios, que só pode ser usado para testar a conexão no Kuma.
+Você também pode pular esta pilha se usar o Postgres gerenciado pela Neon ou outro provedor.
+
+Existe um script para criar um novo "banco de dados" dentro do Postgres e prepará-lo para o Nhost. Útil se você tiver vários aplicativos Nhost que usam a mesma instância do Postgres. 
+
+Outro arquivo SQL cria um novo usuário monitor sem privilégios, que só pode ser usado para testar a conexão no Kuma.
 
 ### nhost
 
 A pilha do Nhost é composta por Hasura, Autenticação do Nhost e Armazenamento do Nhost. Essa pilha não possui estado e pode ser replicada entre servidores sem problemas.
 
-O armazenamento é opcional, pois você pode usar o Nhost sem usar o armazenamento do Nhost, mas ele está configurado corretamente. Esta configuração não inclui seu próprio Minio, então você precisa configurá-lo ou usar Amazon S3, Cloudflare R2 ou similar.
+O armazenamento é opcional, pois você pode usar o Nhost sem usar o armazenamento do Nhost, mas ele está configurado corretamente. 
 
-Para a autenticação do Nhost, você precisa garantir que os modelos de e-mail estejam montados corretamente. Isso é feito pelo rsync nesta configuração.
+Esta configuração não inclui seu próprio Minio, então você precisa configurá-lo ou usar Amazon S3, Cloudflare R2 ou similar.
+
+Para a autenticação do Nhost, você precisa garantir que os modelos de e-mail estejam montados corretamente. 
+
+Isso é feito pelo rsync nesta configuração.
+
 Para Hasura, você precisa fazer migrações e atualizar metadados manualmente (ou criar um script, se desejar). 
 
 Basta usar o cliente Hasura e executar `hasura migrate apply --admin-secret ADMIN_SECRET --database-name default --endpoint hasura-app1.mydomain.com` e `hasura metadata apply --admin-secret ADMIN_SECRET --endpoint hasura-app1.mydomain.com`. 
