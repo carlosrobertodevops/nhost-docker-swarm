@@ -39,9 +39,15 @@ Existe um script para criar um novo "banco de dados" dentro do Postgres e prepar
 ### nhost
 
 A pilha do Nhost é composta por Hasura, Autenticação do Nhost e Armazenamento do Nhost. Essa pilha não possui estado e pode ser replicada entre servidores sem problemas.
+
 O armazenamento é opcional, pois você pode usar o Nhost sem usar o armazenamento do Nhost, mas ele está configurado corretamente. Esta configuração não inclui seu próprio Minio, então você precisa configurá-lo ou usar Amazon S3, Cloudflare R2 ou similar.
+
 Para a autenticação do Nhost, você precisa garantir que os modelos de e-mail estejam montados corretamente. Isso é feito pelo rsync nesta configuração.
-Para Hasura, você precisa fazer migrações e atualizar metadados manualmente (ou criar um script, se desejar). Basta usar o cliente Hasura e executar `hasura migrate apply --admin-secret ADMIN_SECRET --database-name default --endpoint hasura-app1.mydomain.com` e `hasura metadata apply --admin-secret ADMIN_SECRET --endpoint hasura-app1.mydomain.com`. Esteja na pasta nhost ao fazer isso, e suas alterações locais serão aplicadas à produção.
+Para Hasura, você precisa fazer migrações e atualizar metadados manualmente (ou criar um script, se desejar). 
+
+Basta usar o cliente Hasura e executar `hasura migrate apply --admin-secret ADMIN_SECRET --database-name default --endpoint hasura-app1.mydomain.com` e `hasura metadata apply --admin-secret ADMIN_SECRET --endpoint hasura-app1.mydomain.com`. 
+
+Esteja na pasta nhost ao fazer isso, e suas alterações locais serão aplicadas à produção.
 
 Este modelo não implementa funções do Nhost, pois já tive muitos problemas ao usá-las. Você provavelmente deve adicionar outro serviço de API, como um aplicativo Node Express ou um aplicativo Python FastAPI, para suas necessidades de computação. Como alternativa, use o AWS Lambda ou similar.
 
