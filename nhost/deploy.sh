@@ -13,11 +13,11 @@ fi
 docker compose -f ./nhost/docker-compose.yml convert --no-path-resolution | grep -v '^name'  > ./nhost/docker-compose.canonical.yml
 
 Sync the files to the remote server using rsync
-rsync -avz --delete ./nhost/ root@91.99.135.154:/root/nhost-$APP_NAME/
+rsync -avz --delete ./nhost/ root@91.99.128.127:/root/nhost-$APP_NAME/
 
 
 # Log in to the remote server and deploy the stack using docker
-ssh root@91.99.135.154 << EOF
+ssh root@91.99.128.127 << EOF
   # Navigate to the folder where the docker-compose.yml is located
   cd /root/nhost-$APP_NAME/
 

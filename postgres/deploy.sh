@@ -8,10 +8,10 @@ sed -i 's/published: "\(.*\)"/published: \1/' ./postgres/docker-compose.canonica
 sed -i 's/size: "\(.*\)"/size: \1/' ./postgres/docker-compose.canonical.yml
 
 # Sync the files to the remote server using rsync
-rsync -avz --delete ./postgres/ root@91.99.135.154:/root/postgres/
+rsync -avz --delete ./postgres/ root@91.99.128.127:/root/postgres/
 
 # Log in to the remote server and deploy the stack using docker
-ssh root@91.99.135.154 << EOF
+ssh root@91.99.128.127 << EOF
   # Navigate to the folder where the docker-compose.yml is located
   cd /root/postgres/
 

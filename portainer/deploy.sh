@@ -7,10 +7,10 @@ docker compose -f ./portainer/docker-compose.yml convert --no-path-resolution | 
 sed -i 's/published: "\(.*\)"/published: \1/' ./portainer/docker-compose.canonical.yml
 
 # Sync the files to the remote server using rsync
-rsync -avz --delete ./portainer/ root@191.99.135.154:/root/portainer/
+rsync -avz --delete ./portainer/ root@91.99.128.127:/root/portainer/
 
 # Log in to the remote server and deploy the stack using docker
-ssh root@91.99.135.154 << 'EOF'
+ssh root@91.99.128.127 << 'EOF'
   # Navigate to the folder where the docker-compose.canonical.yml is located
   cd /root/portainer/
 
