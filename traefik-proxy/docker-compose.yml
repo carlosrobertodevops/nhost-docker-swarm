@@ -4,10 +4,10 @@ services:
     command:
       - --configFile=/etc/traefik/dynamic/traefik.yml
     ports:
-      - "80:80"
-      - "8080:8080"
-      - "443:443"
-      - "8082:8082" # metrics
+      - 80:80
+      - 8080:8080
+      - 443:443
+      - 8082:8082 # metrics
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./traefik.yml:/etc/traefik/dynamic/traefik.yml" # Bind the traefik.yml file
