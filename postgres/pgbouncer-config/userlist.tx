@@ -1,0 +1,2 @@
+# postgres/pgbouncer-config/userlist.txt
+"postgres" "md5$(echo -n 'password' | md5sum | cut -d ' ' -f 1)"
