@@ -1,0 +1,126 @@
+services:
+  pgbouncer:
+    user: "postgres:postgres"
+    command:
+      - sh
+      - -c
+      - mkdir -p /var/log/pgbouncer && pgbouncer /etc/pgbouncer/pgbouncer.ini
+    deploy:
+      replicas: 1
+      labels:
+        traefik.enable: "true"
+        traefik.tcp.routers.pgbouncer.entrypoints: pgbouncer
+        traefik.tcp.routers.pgbouncer.rule: HostSNI(`postgres-nhost.carlosrobertodevops.com.br`)
+        traefik.tcp.routers.pgbouncer.tls: "true"
+        traefik.tcp.routers.pgbouncer.tls.certresolver: letsencrypt
+        traefik.tcp.services.pgbouncer.loadbalancer.server.port: 6432
+      update_config:
+        parallelism: 1
+        delay: 10s
+      resources:
+        limits:
+          memory: "536870912"
+        reservations:
+          memory: "268435456"
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      PG_USER: postgres
+      DB_HOST: postgres
+      DB_PASSWORD: O5YNfx4CFsYhcHWkMZ3cNJf4g92NPiC0ZUwPZUeyswzUUZyOGTYgx7Q6LTqYQtka
+      DB_PORT: 5432
+      DB_USER: postgres
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -h postgres -d postgres
+      timeout: 5s
+      interval: 30s
+      retries: 3
+      start_period: 10s
+    image: edoburu/pgbouncer
+    networks:
+      postgres_network: null
+      traefik-public: null
+    ports:
+      - mode: ingress
+        target: 6432
+        published: 6432
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: ./pgbouncer-config
+        target: /etc/pgbouncer
+        bind:
+          create_host_path: true
+      - type: volume
+        source: letsencrypt
+        target: /etc/letsencrypt
+        read_only: true
+  postgres:
+    user: "postgres:postgres"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: "4294967296"
+        reservations:
+          memory: "2147483648"
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      PG_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: O5YNfx4CFsYhcHWkMZ3cNJf4g92NPiC0ZUwPZUeyswzUUZyOGTYgx7Q6LTqYQtka
+      POSTGRES_USER: postgres
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready
+    image: nhost/postgres:16.4-20240909-1
+    logging:
+      driver: json-file
+    networks:
+      postgres_network: null
+    volumes:
+      - type: volume
+        source: postgres_data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: ./config/postgresql.conf
+        target: /etc/postgresql.conf.tmpl
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ./config/pg_hba.conf
+        target: /etc/pg_hba.conf.tmpl
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ./config/pg_ident.conf
+        target: /var/lib/postgresql/data/pgdata/pg_ident.conf
+        bind:
+          create_host_path: true
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 2048000000
+networks:
+  postgres_network:
+    name: postgres-stack_postgres_network
+    driver: overlay
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
+  traefik-public:
+    name: traefik-public
+    external: true
+volumes:
+  letsencrypt:
+    name: traefik-stack_letsencrypt
+    external: true
+  postgres_data:
+    name: postgres_data
+    external: true

@@ -1,0 +1,376 @@
+services:
+  agent:
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: "67108864"
+        reservations:
+          memory: "33554432"
+      placement:
+        constraints:
+          - node.platform.os == linux
+          - node.role == manager
+    image: portainer/agent:2.21.1
+    networks:
+      agent_network: null
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /var/lib/docker/volumes
+        target: /var/lib/docker/volumes
+        bind:
+          create_host_path: true
+  agent_worker:
+    deploy:
+      mode: global
+      labels:
+        app_name: agent_worker
+        environment: production
+        service_name: portainer
+      resources:
+        limits:
+          memory: "67108864"
+        reservations:
+          memory: "33554432"
+      placement:
+        constraints:
+          - node.platform.os == linux
+          - node.role != manager
+    image: portainer/agent:2.21.1
+    networks:
+      agent_network: null
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /var/lib/docker/volumes
+        target: /var/lib/docker/volumes
+        bind:
+          create_host_path: true
+  cadvisor:
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: "134217728"
+        reservations:
+          memory: "67108864"
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.platform.os == linux
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    networks:
+      monitoring: null
+    volumes:
+      - type: bind
+        source: /
+        target: /rootfs
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /var/run
+        target: /var/run
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /sys
+        target: /sys
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /var/lib/docker/
+        target: /var/lib/docker
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /dev/kmsg
+        target: /dev/kmsg
+        read_only: true
+        bind:
+          create_host_path: true
+  grafana:
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        traefik.enable: "true"
+        traefik.http.routers.grafana.entrypoints: https
+        traefik.http.routers.grafana.rule: Host(`grafana-nhost.carlosrobertodevops.com.br`)
+        traefik.http.routers.grafana.tls.certresolver: letsencrypt
+        traefik.http.services.grafana.loadbalancer.server.port: "3000"
+      resources:
+        limits:
+          memory: "536870912"
+        reservations:
+          memory: "268435456"
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+      GF_SECURITY_ADMIN_PASSWORD: '@grafana123'
+    image: grafana/grafana:latest
+    networks:
+      monitoring: null
+      traefik-public: null
+    volumes:
+      - type: volume
+        source: grafana_data
+        target: /var/lib/grafana
+        volume: {}
+      - type: bind
+        source: ./grafana/provisioning/
+        target: /etc/grafana/provisioning
+        bind:
+          create_host_path: true
+  loki:
+    command:
+      - -config.file=/etc/loki/loki-config.yaml
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: "536870912"
+        reservations:
+          memory: "268435456"
+      placement:
+        constraints:
+          - node.role == manager
+    image: grafana/loki:latest
+    networks:
+      monitoring: null
+    volumes:
+      - type: bind
+        source: ./loki_data
+        target: /loki_data
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ./loki-config.yaml
+        target: /etc/loki/loki-config.yaml
+        bind:
+          create_host_path: true
+  node-exporter:
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.ignored-mount-points
+      - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: "16777216"
+        reservations:
+          memory: "8388608"
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.platform.os == linux
+    image: quay.io/prometheus/node-exporter:latest
+    networks:
+      monitoring: null
+    volumes:
+      - type: bind
+        source: /proc
+        target: /host/proc
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /sys
+        target: /host/sys
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /
+        target: /rootfs
+        read_only: true
+        bind:
+          create_host_path: true
+  portainer:
+    command:
+      - -H
+      - tcp://tasks.agent:9001
+      - --tlsskipverify
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        app_name: portainer
+        environment: production
+        service_name: portainer
+        traefik.enable: "true"
+        traefik.http.routers.portainer.entrypoints: https
+        traefik.http.routers.portainer.rule: Host(`portainer-nhost.carlosrobertodevops.com.br`)
+        traefik.http.routers.portainer.tls.certresolver: letsencrypt
+        traefik.http.services.portainer.loadbalancer.server.port: "9000"
+      resources:
+        limits:
+          memory: "536870912"
+        reservations:
+          memory: "268435456"
+      placement:
+        constraints:
+          - node.role == manager
+    image: portainer/portainer-ce:2.21.1
+    networks:
+      agent_network: null
+      traefik-public: null
+    volumes:
+      - type: volume
+        source: portainer_data
+        target: /data
+        volume: {}
+  prometheus:
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        traefik.enable: "true"
+        traefik.http.routers.prometheus.entrypoints: https
+        traefik.http.routers.prometheus.middlewares: auth@file
+        traefik.http.routers.prometheus.rule: Host(`prometheus-nhost.carlosrobertodevops.com.br`)
+        traefik.http.routers.prometheus.tls.certresolver: letsencrypt
+        traefik.http.services.prometheus.loadbalancer.server.port: "9090"
+      resources:
+        limits:
+          memory: "536870912"
+        reservations:
+          memory: "268435456"
+      placement:
+        constraints:
+          - node.role == manager
+    image: prom/prometheus:latest
+    networks:
+      monitoring: null
+    volumes:
+      - type: volume
+        source: prometheus_data
+        target: /prometheus
+        volume: {}
+      - type: bind
+        source: ./prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        bind:
+          create_host_path: true
+  promtail:
+    command:
+      - -config.file=/etc/promtail/config.yml
+      - -config.expand-env=true
+    configs:
+      - source: promtail-config
+        target: /etc/promtail/config.yml
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: "268435456"
+        reservations:
+          memory: "67108864"
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.platform.os == linux
+    image: grafana/promtail:latest
+    networks:
+      monitoring: null
+    volumes:
+      - type: bind
+        source: /var/log
+        target: /var/log
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /var/lib/docker/containers
+        target: /var/lib/docker/containers
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /etc/localtime
+        target: /etc/localtime
+        read_only: true
+        bind:
+          create_host_path: true
+  uptime-kuma:
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        traefik.enable: "true"
+        traefik.http.routers.kuma.entrypoints: https
+        traefik.http.routers.kuma.rule: Host(`kuma-nhost.carlosrobertodevops.com.br`)
+        traefik.http.routers.kuma.tls.certresolver: letsencrypt
+        traefik.http.services.kuma.loadbalancer.server.port: "3001"
+      resources:
+        limits:
+          memory: "536870912"
+        reservations:
+          memory: "268435456"
+      placement:
+        constraints:
+          - node.role == manager
+    image: louislam/uptime-kuma:1
+    networks:
+      traefik-public: null
+    volumes:
+      - type: volume
+        source: uptime-kuma-data
+        target: /app/data
+        volume: {}
+networks:
+  agent_network:
+    name: portainer-stack_agent_network
+    driver: overlay
+    driver_opts:
+      com.docker.network.driver.mtu: "1450"
+    attachable: true
+  monitoring:
+    name: portainer-stack_monitoring
+    driver: overlay
+    driver_opts:
+      com.docker.network.driver.mtu: "1450"
+    attachable: true
+  traefik-public:
+    name: traefik-public
+    external: true
+volumes:
+  grafana_data:
+    name: portainer-stack_grafana_data
+  portainer_data:
+    name: portainer-stack_portainer_data
+  prometheus_data:
+    name: portainer-stack_prometheus_data
+  uptime-kuma-data:
+    name: portainer-stack_uptime-kuma-data
+configs:
+  promtail-config:
+    name: promtail-config.yml
+    file: ./promtail-config.yml

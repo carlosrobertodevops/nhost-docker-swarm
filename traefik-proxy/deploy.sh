@@ -16,7 +16,7 @@
 
 #   # Deploy the stack using docker stack deploy --resolve-image always
 docker stack deploy -c docker-compose.canonical.yml traefik-stack --resolve-image always --detach
-EOF
+#EOF
 
 
 # ORIGINAL
