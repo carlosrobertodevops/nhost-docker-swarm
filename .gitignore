@@ -2,8 +2,8 @@
 .secrets
 
 .env
-pgbouncer.ini
-userlist.txt
-docker-compose.canonical.yml
+#pgbouncer.ini
+#userlist.txt
+#docker-compose.canonical.yml
 
 node_modules/
