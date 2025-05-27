@@ -20,17 +20,17 @@ api:
 
 ping:
   entryPoint: http
-  
+
 log:
-  level: INFO  # Set logging level (INFO, DEBUG, ERROR)
+  level: INFO # Set logging level (INFO, DEBUG, ERROR)
 
 accessLog:
-  bufferingSize: 100  # Buffer logs before writing to disk
+  bufferingSize: 100 # Buffer logs before writing to disk
 
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: myname@gmail.com
+      email: carlos.roberto.devops@gmail.com
       storage: /letsencrypt/acme.json
       httpChallenge:
         entryPoint: http
@@ -44,7 +44,6 @@ providers:
     exposedByDefault: false
     swarmMode: true
     network: traefik-public
-    
 
 # Define middlewares for authentication
 http:
@@ -52,9 +51,31 @@ http:
     auth:
       basicAuth:
         users:
-          - "user:$hashed_pw" # Use the hash from htpasswd -nb user password
+        - "carlosrobertodevops:$apr1$Ighbak2S$cXqqCJTAKJ9HdEIpl6leK1" # Use the hash from htpasswd -nb user password
+  routers:
+    hasura:
+      rule: "Host(`hasura.carlosrobertodevops.com.br`)"
+      entryPoints:
+      - "websecure"
+      tls:
+        certResolver: "letsencrypt"
+      service: "hasura"
 
+    auth:
+      rule: "Host(`auth.carlosrobertodevops.com.br`)"
+      entryPoints:
+      - "websecure"
+      tls:
+        certResolver: "letsencrypt"
+      service: "auth"
 
+    storage:
+      rule: "Host(`storage.carlosrobertodevops.com.br`)"
+      entryPoints:
+      - "websecure"
+      tls:
+        certResolver: "letsencrypt"
+      service: "storage"
 
 metrics:
   prometheus:
