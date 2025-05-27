@@ -1,12 +1,12 @@
 #!/bin/bash
 
-APP_NAME=$1
+# APP_NAME=$1
 
-# Exit if not provided
-if [ -z "$APP_NAME" ]; then
-  echo "Please provide an app name"
-  exit 1
-fi
+# # Exit if not provided
+# if [ -z "$APP_NAME" ]; then
+#   echo "Please provide an app name"
+#   exit 1
+# fi
 
 
 # Convert docker-compose.yml to canonical form to insert env variables
