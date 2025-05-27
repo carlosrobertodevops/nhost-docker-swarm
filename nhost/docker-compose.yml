@@ -2,10 +2,8 @@ services:
   graphql-engine:
     image: "hasura/graphql-engine:v2.42.0"
     environment:
-      # HASURA_GRAPHQL_METADATA_DATABASE_URL: "${RAW_DATABASE_URL}"
-      # HASURA_GRAPHQL_DATABASE_URL: "${RAW_DATABASE_URL}"
-      HASURA_GRAPHQL_METADATA_DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB_APP1}"
-      HASURA_GRAPHQL_DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB_APP1}?pool_timeout=10"
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: "${RAW_DATABASE_URL}"
+      HASURA_GRAPHQL_DATABASE_URL: "${RAW_DATABASE_URL}"
       HASURA_GRAPHQL_PG_CONNECTIONS: "50"
       HASURA_GRAPHQL_PG_TIMEOUT: "10"
       HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
@@ -16,9 +14,6 @@ services:
       HASURA_GRAPHQL_JWT_SECRET: "${HASURA_GRAPHQL_JWT_SECRET}"
       HASURA_GRAPHQL_CORS_DOMAIN: "*"
       HASURA_GRAPHQL_UNAUTHORIZED_ROLE: public
-    depends_on:
-      - postgres
-      - pgbouncer
     networks:
       - traefik-public
       - postgres_network
