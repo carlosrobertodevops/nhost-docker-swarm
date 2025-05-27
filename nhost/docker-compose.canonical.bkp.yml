@@ -3,11 +3,9 @@ services:
     deploy:
       replicas: 2
       labels:
-        traefik.docker.network: traefik-public
         traefik.enable: "true"
         traefik.http.routers.auth-app1.entrypoints: https
         traefik.http.routers.auth-app1.rule: Host(`auth-app1-nhost.carlosrobertodevops.com.br`)
-        traefik.http.routers.auth-app1.tls: "true"
         traefik.http.routers.auth-app1.tls.certresolver: letsencrypt
         traefik.http.services.auth-app1.loadbalancer.server.port: "4000"
       update_config:
@@ -104,13 +102,11 @@ services:
     deploy:
       replicas: 1
       labels:
-        traefik.docker.network: traefik-public
         traefik.enable: "true"
         traefik.http.middlewares.auth-dashboard-app1.basicauth.users: user:$$apr1$$ldguuY/O$$MVR30H5//NIte8c1ezkfkf
         traefik.http.routers.dashboard-app1.entrypoints: https
         traefik.http.routers.dashboard-app1.middlewares: auth-dashboard-app1
         traefik.http.routers.dashboard-app1.rule: Host(`dashboard-app1-nhost.carlosrobertodevops.com.br`)
-        traefik.http.routers.dashboard-app1.tls: "true"
         traefik.http.routers.dashboard-app1.tls.certresolver: letsencrypt
         traefik.http.services.dashboard-app1.loadbalancer.server.port: "3000"
       update_config:
@@ -137,11 +133,9 @@ services:
     deploy:
       replicas: 2
       labels:
-        traefik.docker.network: traefik-public
         traefik.enable: "true"
         traefik.http.routers.hasura-app1.entrypoints: https
         traefik.http.routers.hasura-app1.rule: Host(`hasura-app1-nhost.carlosrobertodevops.com.br`)
-        traefik.http.routers.hasura-app1.tls: "true"
         traefik.http.routers.hasura-app1.tls.certresolver: letsencrypt
         traefik.http.services.hasura-app1.loadbalancer.server.port: "8080"
       update_config:
@@ -170,11 +164,9 @@ services:
     deploy:
       replicas: 2
       labels:
-        traefik.docker.network: traefik-public
         traefik.enable: "true"
         traefik.http.routers.storage-app1.entrypoints: https
         traefik.http.routers.storage-app1.rule: Host(`storage-app1-nhost.mycarlosrobertodevops.com.br`)
-        traefik.http.routers.storage-app1.tls: "true"
         traefik.http.routers.storage-app1.tls.certresolver: letsencrypt
         traefik.http.services.storage-app1.loadbalancer.server.port: "5000"
       update_config:

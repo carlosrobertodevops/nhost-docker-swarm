@@ -1,0 +1,220 @@
+services:
+  graphql-engine:
+    image: "hasura/graphql-engine:v2.42.0"
+    environment:
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: "${RAW_DATABASE_URL}"
+      HASURA_GRAPHQL_DATABASE_URL: "${RAW_DATABASE_URL}"
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+      HASURA_GRAPHQL_DEV_MODE: "true"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: "startup, http-log, webhook-log, websocket-log, query-log"
+      HASURA_GRAPHQL_ADMIN_SECRET: "${HASURA_GRAPHQL_ADMIN_SECRET}"
+      NHOST_WEBHOOK_SECRET: "${NHOST_WEBHOOK_SECRET}"
+      HASURA_GRAPHQL_JWT_SECRET: "${HASURA_GRAPHQL_JWT_SECRET}"
+      HASURA_GRAPHQL_CORS_DOMAIN: "*"
+      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: public
+    networks:
+      - traefik-public
+      - postgres_network
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.hasura-app1.rule=Host(`${HASURA_DOMAIN}`)
+        - traefik.http.routers.hasura-app1.entrypoints=https
+        - traefik.http.routers.hasura-app1.tls=true
+        - traefik.http.routers.hasura-app1.tls.certresolver=letsencrypt
+        - traefik.http.services.hasura-app1.loadbalancer.server.port=8080
+        - traefik.docker.network=traefik-public
+
+  auth:
+    image: "nhost/hasura-auth:0.33.0"
+    environment:
+      AUTH_ACCESS_CONTROL_ALLOWED_EMAIL_DOMAINS: ""
+      AUTH_ACCESS_CONTROL_ALLOWED_EMAILS: ""
+      AUTH_ACCESS_CONTROL_ALLOWED_REDIRECT_URLS: ""
+      AUTH_ACCESS_CONTROL_BLOCKED_EMAIL_DOMAINS: ""
+      AUTH_ACCESS_CONTROL_BLOCKED_EMAILS: ""
+      AUTH_ACCESS_TOKEN_EXPIRES_IN: "900"
+      AUTH_ANONYMOUS_USERS_ENABLED: "false"
+      AUTH_API_PREFIX: /v1
+      AUTH_CLIENT_URL: "https://your-client-domain.com"
+      AUTH_CONCEAL_ERRORS: "false"
+      AUTH_DISABLE_NEW_USERS: "false"
+      AUTH_DISABLE_SIGNUP: "false"
+      AUTH_EMAIL_PASSWORDLESS_ENABLED: "false"
+      AUTH_EMAIL_SIGNIN_EMAIL_VERIFIED_REQUIRED: "false"
+      AUTH_GRAVATAR_DEFAULT: blank
+      AUTH_GRAVATAR_ENABLED: "true"
+      AUTH_GRAVATAR_RATING: g
+      AUTH_HOST: 0.0.0.0
+      AUTH_JWT_CUSTOM_CLAIMS: "{}"
+      AUTH_LOCALE_ALLOWED_LOCALES: en
+      AUTH_LOCALE_DEFAULT: en
+      AUTH_MFA_ENABLED: "false"
+      AUTH_MFA_TOTP_ISSUER: ""
+      AUTH_PASSWORD_HIBP_ENABLED: "false"
+      AUTH_PASSWORD_MIN_LENGTH: "9"
+      AUTH_PORT: "4000"
+      AUTH_RATE_LIMIT_ENABLE: "true"
+      AUTH_REFRESH_TOKEN_EXPIRES_IN: "2592000"
+      AUTH_SERVER_URL: "https://${AUTH_DOMAIN}/v1"
+      AUTH_SMTP_AUTH_METHOD: PLAIN
+      AUTH_SMTP_HOST: smtp.your-smtp-host.com
+      AUTH_SMTP_PASS: your-smtp-password
+      AUTH_SMTP_PORT: "587"
+      AUTH_SMTP_SECURE: "true"
+      AUTH_SMTP_SENDER: noreply@your-domain.com
+      AUTH_SMTP_USER: your-smtp-user
+      AUTH_USER_DEFAULT_ALLOWED_ROLES: "user,me"
+      AUTH_USER_DEFAULT_ROLE: user
+      HASURA_GRAPHQL_ADMIN_SECRET: "${HASURA_GRAPHQL_ADMIN_SECRET}"
+      HASURA_GRAPHQL_DATABASE_URL: "${PGBOUNCER_DATABASE_URL}"
+      HASURA_GRAPHQL_GRAPHQL_URL: "https://${HASURA_DOMAIN}/v1/graphql"
+      HASURA_GRAPHQL_JWT_SECRET: "${HASURA_GRAPHQL_JWT_SECRET}"
+      POSTGRES_MIGRATIONS_CONNECTION: "${PGBOUNCER_DATABASE_URL}"
+    volumes:
+      - type: bind
+        source: ./emails
+        target: /app/email-templates
+        read_only: false
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - "--spider"
+        - "-S"
+        - "http://localhost:4000/healthz"
+      timeout: 60s
+      interval: 5s
+      start_period: 60s
+    networks:
+      - traefik-public
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.auth-app1.rule=Host(`${AUTH_DOMAIN}`)
+        - traefik.http.routers.auth-app1.entrypoints=https
+        - traefik.http.routers.auth-app1.tls=true
+        - traefik.http.routers.auth-app1.tls.certresolver=letsencrypt
+        - traefik.http.services.auth-app1.loadbalancer.server.port=4000
+        - traefik.docker.network=traefik-public
+
+  storage:
+    image: nhost/hasura-storage:0.6.1
+    environment:
+      BIND: :5000
+      PORT: 5000
+      HASURA_ENDPOINT: "https://${HASURA_DOMAIN}/v1"
+      HASURA_GRAPHQL_ADMIN_SECRET: "${HASURA_GRAPHQL_ADMIN_SECRET}"
+      HASURA_METADATA: "1"
+      POSTGRES_MIGRATIONS: "1"
+      POSTGRES_MIGRATIONS_SOURCE: "${PGBOUNCER_DATABASE_URL}?sslmode=disable"
+      PUBLIC_URL: https://${STORAGE_DOMAIN}
+      S3_ACCESS_KEY: "${S3_ACCESS_KEY}"
+      S3_BUCKET: "${S3_BUCKET}"
+      S3_ENDPOINT: "${S3_ENDPOINT}"
+      S3_REGION: "${S3_REGION}"
+      S3_ROOT_FOLDER: ""
+      S3_SECRET_KEY: "${S3_SECRET_KEY}"
+    networks:
+      - traefik-public
+    command:
+      - serve
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.storage-app1.rule=Host(`${STORAGE_DOMAIN}`)
+        - traefik.http.routers.storage-app1.entrypoints=https
+        - traefik.http.routers.storage-app1.tls=true
+        - traefik.http.routers.storage-app1.tls.certresolver=letsencrypt
+        - traefik.http.services.storage-app1.loadbalancer.server.port=5000
+        - traefik.docker.network=traefik-public
+
+  dashboard:
+    image: nhost/dashboard:1.27.0
+    environment:
+      NEXT_PUBLIC_ENV: prod
+      NEXT_PUBLIC_NHOST_ADMIN_SECRET: "${HASURA_GRAPHQL_ADMIN_SECRET}"
+      NEXT_PUBLIC_NHOST_AUTH_URL: https://${AUTH_DOMAIN}/v1
+      NEXT_PUBLIC_NHOST_CONFIGSERVER_URL: ""
+      NEXT_PUBLIC_NHOST_FUNCTIONS_URL: ""
+      NEXT_PUBLIC_NHOST_GRAPHQL_URL: https://${HASURA_DOMAIN}/v1/graphql
+      NEXT_PUBLIC_NHOST_HASURA_API_URL: ""
+      NEXT_PUBLIC_NHOST_HASURA_CONSOLE_URL: ""
+      NEXT_PUBLIC_NHOST_HASURA_MIGRATIONS_API_URL: ""
+      NEXT_PUBLIC_NHOST_PLATFORM: "false"
+      NEXT_PUBLIC_NHOST_STORAGE_URL: https://${STORAGE_DOMAIN}/v1
+    networks:
+      - traefik-public
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.dashboard-app1.rule=Host(`${DASHBOARD_DOMAIN}`)
+        - traefik.http.routers.dashboard-app1.entrypoints=https
+        - traefik.http.routers.dashboard-app1.tls=true
+        - traefik.http.routers.dashboard-app1.tls.certresolver=letsencrypt
+        - traefik.http.services.dashboard-app1.loadbalancer.server.port=3000
+        # Auth middleware
+        - traefik.http.middlewares.auth-dashboard-app1.basicauth.users=${DASHBOARD_AUTH} # Use the hash from htpasswd -nb user password
+        - traefik.http.routers.dashboard-app1.middlewares=auth-dashboard-app1
+        - traefik.docker.network=traefik-public
+    working_dir: ""
+
+  # https://github.com/eeshugerman/postgres-backup-s3
+  backup:
+    image: eeshugerman/postgres-backup-s3:16
+    environment:
+      SCHEDULE: "@daily" # optional
+      BACKUP_KEEP_DAYS: 14 # optional
+      #PASSPHRASE: passphrase  # optional
+      S3_REGION: ${S3_REGION}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_PREFIX: app1_backup
+      POSTGRES_HOST: postgres
+      POSTGRES_DATABASE: app1
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${PG_BACKUP_PASSWORD}
+
+    networks:
+      - postgres_network
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+networks:
+  traefik-public:
+    external: true
+    name: traefik-public
+  postgres_network:
+    external: true
+    name: postgres-stack_postgres_network
