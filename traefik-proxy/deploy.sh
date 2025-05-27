@@ -15,7 +15,7 @@ docker compose -f docker-compose.yml convert --no-path-resolution | grep -v '^na
 #   cd /root/nhost-docker-swarm/traefik-proxy
 
 #   # Deploy the stack using docker stack deploy --resolve-image always
-  docker stack deploy -c docker-compose.canonical.yml traefik-stack --resolve-image always --detach
+docker stack deploy -c docker-compose.canonical.yml traefik-stack --resolve-image always --detach
 # EOF
 
 
