@@ -1,6 +1,6 @@
 services:
   postgres:
-    # image: postgres:13-alpine ## nhost/postgres:16.4-20240909-1
+    image: . #postgres:13-alpine ## nhost/postgres:16.4-20240909-1
     environment:
       POSTGRES_INITDB_ARGS: --clean
       POSTGRES_USER: postgres
@@ -20,7 +20,7 @@ services:
       - postgres_network
     deploy:
       placement:
-        constraints: [node.role == manager]
+        constraints: [node.role == manager]Ajustes
       replicas: 1
       resources:
         limits:
