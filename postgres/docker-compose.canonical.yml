@@ -118,9 +118,5 @@ volumes:
     name: traefik-stack_letsencrypt
     external: true
   postgres_data:
-    name: postgres_postgres_data
-    driver: local
-    driver_opts:
-      device: /docker/postgres/data
-      o: bind
-      type: none
+    name: postgres_data
+    external: true
