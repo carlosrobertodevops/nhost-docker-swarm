@@ -14,7 +14,7 @@ services:
       - type: tmpfs
         target: /dev/shm
         tmpfs:
-          size: 2048000000 # (this means 2GB)
+          size: 4096000000 # (this means 4GB)
     networks:
       - postgres_network
     deploy:
@@ -25,7 +25,7 @@ services:
         limits:
           memory: 4G
         reservations:
-          memory: 2G
+          memory: 3G
     healthcheck:
       test:
         - CMD-SHELL
