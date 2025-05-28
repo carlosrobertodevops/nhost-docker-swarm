@@ -23,9 +23,9 @@ services:
       replicas: 1
       resources:
         limits:
-          memory: 4G
+          memory: 2G
         reservations:
-          memory: 3G
+          memory: 1.5G
     healthcheck:
       test:
         - CMD-SHELL
