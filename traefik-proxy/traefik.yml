@@ -51,7 +51,7 @@ http:
     auth:
       basicAuth:
         users:
-        - "carlosrobertodevops:$apr1$Ighbak2S$cXqqCJTAKJ9HdEIpl6leK1" # Use the hash from htpasswd -nb user password
+        - "carlosrobertodevops:$$apr1$$Ighbak2S$$cXqqCJTAKJ9HdEIpl6leK1" # Use the hash from htpasswd -nb user password
   routers:
     hasura:
       rule: "Host(`hasura.carlosrobertodevops.com.br`)"
