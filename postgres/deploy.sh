@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Convert docker-compose.yml to canonical form to insert env variables
-# docker compose -f docker-compose.yml convert --no-path-resolution | grep -v '^name'  > docker-compose.canonical.yml
+docker compose -f docker-compose.yml convert --no-path-resolution | grep -v '^name'  > docker-compose.canonical.yml
 
 # Replace quoted integers in the `published` port with unquoted integers
-# sed -i 's/published: "\(.*\)"/published: \1/' docker-compose.canonical.yml
-# sed -i 's/size: "\(.*\)"/size: \1/' docker-compose.canonical.yml
+sed -i 's/published: "\(.*\)"/published: \1/' docker-compose.canonical.yml
+sed -i 's/size: "\(.*\)"/size: \1/' docker-compose.canonical.yml
 
 # Sync the files to the remote server using rsync
 # rsync -avz --delete ./postgres/ root@91.99.128.127:/root/postgres/
