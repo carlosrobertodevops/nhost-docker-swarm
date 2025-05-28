@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: . #postgres:13-alpine ## nhost/postgres:16.4-20240909-1
+    image: ./Dockerfile #postgres:13-alpine ## nhost/postgres:16.4-20240909-1
     environment:
       POSTGRES_INITDB_ARGS: --clean
       POSTGRES_USER: postgres
