@@ -1,9 +1,9 @@
 services:
   postgres:
-    # image: ./Dockerfile #postgres:13-alpine ## nhost/postgres:16.4-20240909-1
-    build:
-      context: .  # Diretório atual como contexto
-      dockerfile: Dockerfile
+    image: postgres:13-alpine # nhost/postgres:16.4-20240909-1
+    # build:
+    #   context: .  # Diretório atual como contexto
+    #   dockerfile: Dockerfile
     environment:
       POSTGRES_INITDB_ARGS: --clean
       POSTGRES_USER: postgres
