@@ -97,12 +97,7 @@ networks:
 
 volumes:
   postgres_data:
-    # external: true # For safety, create this volume manually
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: /docker/postgres/data
+    external: true # For safety, create this volume manually
   letsencrypt:
     external: true
     name: traefik-stack_letsencrypt
