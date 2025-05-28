@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:13-alpine ## nhost/postgres:16.4-20240909-1
+    image: nhost/postgres:16.4-20240909-1 ## postgres:13-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: "${DB_PASSWORD}"
