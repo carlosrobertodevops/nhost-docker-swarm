@@ -1,13 +1,14 @@
 services:
   postgres:
-    image: postgres:13-alpine ## nhost/postgres:16.4-20240909-1
+    # image: postgres:13-alpine ## nhost/postgres:16.4-20240909-1
     environment:
+      POSTGRES_INITDB_ARGS: --clean
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: "${DB_PASSWORD}"
       POSTGRES_DB: postgres
     # The nhost postgres has a init.sh that sets the postgresql.conf and pg_hba.conf from a template.
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data:z
       - ./config/postgresql.conf:/etc/postgresql.conf.tmpl
       - ./config/pg_hba.conf:/etc/pg_hba.conf.tmpl
       - ./config/pg_ident.conf:/var/lib/postgresql/data/pgdata/pg_ident.conf
