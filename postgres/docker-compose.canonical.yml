@@ -61,12 +61,9 @@ services:
       replicas: 1
       resources:
         limits:
-          memory: "8589934592"
+          memory: "2147483648"
         reservations:
-          memory: "4294967296"
-      placement:
-        constraints:
-          - node.role == manager
+          memory: "1610612736"
     environment:
       POSTGRES_DB: postgres
       POSTGRES_PASSWORD: O5YNfx4CFsYhcHWkMZ3cNJf4g92NPiC0ZUwPZUeyswzUUZyOGTYgx7Q6LTqYQtka
